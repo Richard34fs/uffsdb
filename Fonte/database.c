@@ -45,66 +45,70 @@ char connectDB(char *db_name) {
 }
 
 void createDB(char *db_name) {
-	FILE *DB;
-	int i, len;
-	char vec_name[QTD_DB][LEN_DB_NAME_IO],
-		    vec_directory[QTD_DB][LEN_DB_NAME_IO],
-		    create[LEN_DB_NAME_IO] = "mkdir data/",
-        *aux_name_tolower,valid;
+    FILE *DB;
+    int i, len;
+    char vec_name[QTD_DB][LEN_DB_NAME_IO],
+            vec_directory[QTD_DB][LEN_DB_NAME_IO],
+            create[LEN_DB_NAME_IO] = "mkdir data/",
+            *aux_name_tolower,valid;
 
-  if((DB = fopen("data/DB.dat","a+b")) == NULL) {
-    printf("ERROR: cannot open file\n");
-	  return;
-  }
-
-  if(strlen(db_name) > LEN_DB_NAME) {
-  	printf("WARNING: database name is too long, it will be truncated\n");
-  	db_name[LEN_DB_NAME] = '\0';
-  }
-
-  for(i=0; fgetc (DB) != EOF; i++) {
-  	fseek(DB, -1, 1);
-
-  	fread(&valid			,sizeof(char), 			 1, DB);
-    fread(vec_name[i]  		,sizeof(char), LEN_DB_NAME_IO, DB);
-    fread(vec_directory[i] 	,sizeof(char), LEN_DB_NAME_IO, DB);
-
-    if(valid && objcmp(vec_name[i], db_name) == 0) {
-    	fclose(DB);
-		  if(objcmp(db_name, "uffsdb") != 0) 			// banco de dados ja existe
-        printf("ERROR: database already exists\n");
-      return;
+    if((DB = fopen("data/DB.dat","a+b")) == NULL) {
+        printf("ERROR: cannot open file\n");
+        return;
     }
-  }
 
-  if(i >= QTD_DB) {
-  	fclose(DB);
-  	printf("ERROR: The amount of databases in this machine exceeded the limit.\n");
-  	return;
-  }
+    if(strlen(db_name) > LEN_DB_NAME) {
+        printf("WARNING: database name is too long, it will be truncated\n");
+        db_name[LEN_DB_NAME] = '\0';
+    }
 
-  data_base *SGBD = (data_base*)malloc(sizeof(data_base));
-	len = strlen(db_name);
+    if(db_name[0] == '"' && db_name[strlen(db_name) - 1] == '"') {
+        memmove(db_name, db_name + 1, strlen(db_name) - 2);
+        db_name[strlen(db_name) - 2] = '\0';
+    }
 
-	SGBD->valid = 1;
-	strcpylower(SGBD->db_name, db_name);
-	strcpylower(SGBD->db_directory, db_name);
-	strcat(SGBD->db_directory	, "/");
-	SGBD->db_name[len] 			= '\0';
-	SGBD->db_directory[len+1] 	= '\0';
-	fwrite(SGBD ,sizeof(data_base), 1, DB);
+    for(i=0; fgetc (DB) != EOF; i++) {
+        fseek(DB, -1, 1);
 
-  aux_name_tolower = (char *)malloc(sizeof(char) * (strlen(db_name)+1));
-  strcpylower(aux_name_tolower, db_name);
-  strcat(create, aux_name_tolower);
-  free(aux_name_tolower);
+        fread(&valid          ,sizeof(char),            1, DB);
+        fread(vec_name[i]       ,sizeof(char), LEN_DB_NAME_IO, DB);
+        fread(vec_directory[i]  ,sizeof(char), LEN_DB_NAME_IO, DB);
 
-	if(system(create) == -1) {			//verifica se foi possivel criar o diretorio
-		printf("ERROR: It was not possible to create the database\n");
-	}
-  else if(objcmp(db_name, "uffsdb") != 0) printf("CREATE DATABASE\n");
-  free(SGBD);
-  fclose(DB);
+        if(valid && objcmp(vec_name[i], db_name) == 0) {
+            fclose(DB);
+            if(objcmp(db_name, "uffsdb") != 0)           // banco de dados ja existe
+                printf("ERROR: database already exists\n");
+            return;
+        }
+    }
+
+    if(i >= QTD_DB) {
+        fclose(DB);
+        printf("ERROR: The amount of databases in this machine exceeded the limit.\n");
+        return;
+    }
+
+    data_base SGBD;
+    len = strlen(db_name);
+
+    SGBD.valid = 1;
+    strcpylower(SGBD.db_name, db_name);
+    strcpylower(SGBD.db_directory, db_name);
+    strcat(SGBD.db_directory   , "/");
+    SGBD.db_name[len]          = '\0';
+    SGBD.db_directory[len+1]   = '\0';
+    fwrite(&SGBD ,sizeof(data_base), 1, DB);
+
+    aux_name_tolower = (char *)malloc(sizeof(char) * (strlen(db_name)+1));
+    strcpylower(aux_name_tolower, db_name);
+    strcat(create, aux_name_tolower);
+    free(aux_name_tolower);
+
+    if(system(create) == -1) {         //verifica se foi possivel criar o diretorio
+        printf("ERROR: It was not possible to create the database\n");
+    }
+    else if(objcmp(db_name, "uffsdb") != 0) printf("CREATE DATABASE\n");
+    fclose(DB);
 }
 
 void dropDatabase(char *db_name){
